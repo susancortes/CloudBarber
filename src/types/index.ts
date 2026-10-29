@@ -16,6 +16,7 @@ export interface Servicio {
   duracion: string; // ej. '30 min'
   precio: number;
   foto?: string; // Foto opcional del servicio
+  categoria?: 'Cabello' | 'Barba' | 'Facial';
   estado: 'Activo' | 'Inactivo';
 }
 
@@ -29,6 +30,7 @@ export interface Paquete {
   precioRegular: number;
   precioOfertado?: number; // Opcional por si no tiene oferta
   tieneOferta: boolean; // Indica si la oferta está activa o no
+  categoria?: 'Estándar' | 'Promoción';
   estado: 'Activo' | 'Inactivo';
 }
 

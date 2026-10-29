@@ -2,12 +2,24 @@ import React, { useState } from 'react';
 import type { Servicio } from '../../types';
 
 interface PropsModalServicio {
+  isOpen: boolean;
   onClose: () => void;
   onGuardar: (servicio: Servicio) => void;
   servicioAEditar?: Servicio | null;
 }
 
 export const ModalServicio: React.FC<PropsModalServicio> = ({
+  isOpen,
+  ...props
+}) => {
+  if (!isOpen) return null;
+
+  return <FormularioModalServicio key={props.servicioAEditar?.id ?? 'nuevo'} {...props} />;
+};
+
+type PropsFormularioModalServicio = Omit<PropsModalServicio, 'isOpen'>;
+
+const FormularioModalServicio: React.FC<PropsFormularioModalServicio> = ({
   onClose,
   onGuardar,
   servicioAEditar,
@@ -16,6 +28,9 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
   const [descripcion, setDescripcion] = useState(servicioAEditar?.descripcion ?? '');
   const [duracion, setDuracion] = useState(servicioAEditar?.duracion ?? '30 min');
   const [precio, setPrecio] = useState(servicioAEditar?.precio ?? 200);
+  const [categoria, setCategoria] = useState<'Cabello' | 'Barba' | 'Facial'>(
+    servicioAEditar?.categoria ?? 'Cabello'
+  );
   const [foto, setFoto] = useState(servicioAEditar?.foto ?? '');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -28,6 +43,7 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
       descripcion,
       duracion,
       precio: Number(precio),
+      categoria,
       foto,
       estado: servicioAEditar ? servicioAEditar.estado : 'Activo',
     };
@@ -55,8 +71,21 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
               placeholder="Ej. Corte clásico"
               value={nombreServicio}
               onChange={(e) => setNombreServicio(e.target.value)}
-              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none focus:border-gray-500"
+              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+            <select
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value as 'Cabello' | 'Barba' | 'Facial')}
+              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
+            >
+              <option value="Cabello">Cabello</option>
+              <option value="Barba">Barba</option>
+              <option value="Facial">Facial / Tratamiento</option>
+            </select>
           </div>
 
           <div>
@@ -66,7 +95,7 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               rows={2}
-              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none focus:border-gray-500"
+              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
             />
           </div>
 
@@ -78,7 +107,7 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
                 placeholder="Ej. 30 min"
                 value={duracion}
                 onChange={(e) => setDuracion(e.target.value)}
-                className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none focus:border-gray-500"
+                className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
               />
             </div>
             <div>
@@ -88,7 +117,7 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
                 required
                 value={precio}
                 onChange={(e) => setPrecio(Number(e.target.value))}
-                className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none focus:border-gray-500"
+                className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
               />
             </div>
           </div>
@@ -100,7 +129,7 @@ export const ModalServicio: React.FC<PropsModalServicio> = ({
               placeholder="https://..."
               value={foto}
               onChange={(e) => setFoto(e.target.value)}
-              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none focus:border-gray-500"
+              className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
             />
           </div>
 
