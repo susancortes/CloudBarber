@@ -13,12 +13,42 @@ const obtenerServicios = async (req, res) => {
 // 2. Crear un nuevo servicio
 const crearServicio = async (req, res) => {
     try {
-        const { nombre_servicio, descripcion, duracion, precio, categoria, foto } = req.body;
+        const {
+            nombre_servicio,
+            descripcion,
+            duracion,
+            precio,
+            categoria,
+            foto,
+            tiene_oferta = false,
+            precio_ofertado
+        } = req.body;
+
+        if (
+            typeof tiene_oferta !== 'boolean' ||
+            (tiene_oferta &&
+                (precio_ofertado == null ||
+                    !Number.isFinite(Number(precio_ofertado)) ||
+                    Number(precio_ofertado) < 0 ||
+                    Number(precio_ofertado) > Number(precio)))
+        ) {
+            return res.status(400).json({ error: 'Los datos de la oferta no son válidos' });
+        }
         
         const [result] = await db.query(
-            `INSERT INTO servicios (nombre_servicio, descripcion, duracion, precio, categoria, foto) 
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [nombre_servicio, descripcion, duracion, precio, categoria, foto]
+            `INSERT INTO servicios
+             (nombre_servicio, descripcion, duracion, precio, categoria, foto, tiene_oferta, precio_ofertado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                nombre_servicio,
+                descripcion,
+                duracion,
+                precio,
+                categoria,
+                foto,
+                tiene_oferta,
+                tiene_oferta ? precio_ofertado : null
+            ]
         );
 
         res.status(201).json({ 
@@ -38,7 +68,9 @@ const actualizarServicio = async (req, res) => {
         precio,
         categoria,
         estado,
-        foto
+        foto,
+        tiene_oferta = false,
+        precio_ofertado
     } = req.body || {};
 
     if (
@@ -48,7 +80,13 @@ const actualizarServicio = async (req, res) => {
         !duracion.trim() ||
         !Number.isFinite(Number(precio)) ||
         !['Cabello', 'Barba', 'Facial'].includes(categoria) ||
-        !['Activo', 'Inactivo'].includes(estado)
+        !['Activo', 'Inactivo'].includes(estado) ||
+        typeof tiene_oferta !== 'boolean' ||
+        (tiene_oferta &&
+            (precio_ofertado == null ||
+                !Number.isFinite(Number(precio_ofertado)) ||
+                Number(precio_ofertado) < 0 ||
+                Number(precio_ofertado) > Number(precio)))
     ) {
         return res.status(400).json({ error: 'Los datos del servicio no son válidos' });
     }
@@ -57,7 +95,7 @@ const actualizarServicio = async (req, res) => {
         const [result] = await db.query(
             `UPDATE servicios
              SET nombre_servicio = ?, descripcion = ?, duracion = ?, precio = ?,
-                 categoria = ?, estado = ?, foto = ?
+                 categoria = ?, estado = ?, foto = ?, tiene_oferta = ?, precio_ofertado = ?
              WHERE id = ?`,
             [
                 nombre_servicio.trim(),
@@ -67,6 +105,8 @@ const actualizarServicio = async (req, res) => {
                 categoria,
                 estado,
                 foto || '',
+                tiene_oferta,
+                tiene_oferta ? Number(precio_ofertado) : null,
                 req.params.id
             ]
         );
@@ -106,9 +146,23 @@ const actualizarEstadoServicio = async (req, res) => {
     }
 };
 
+const eliminarServicio = async (req, res) => {
+    try {
+        const [result] = await db.query('DELETE FROM servicios WHERE id = ?', [req.params.id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Servicio no encontrado' });
+        }
+
+        res.json({ mensaje: 'Servicio eliminado correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     obtenerServicios,
     crearServicio,
     actualizarServicio,
-    actualizarEstadoServicio
+    actualizarEstadoServicio,
+    eliminarServicio
 };

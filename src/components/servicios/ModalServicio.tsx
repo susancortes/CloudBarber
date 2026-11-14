@@ -32,6 +32,10 @@ const FormularioModalServicio: React.FC<PropsFormularioModalServicio> = ({
     servicioAEditar?.categoria ?? 'Cabello'
   );
   const [foto, setFoto] = useState(servicioAEditar?.foto ?? '');
+  const [tieneOferta, setTieneOferta] = useState(servicioAEditar?.tieneOferta ?? false);
+  const [precioOfertado, setPrecioOfertado] = useState(
+    servicioAEditar?.precioOfertado ?? servicioAEditar?.precio ?? 150
+  );
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -45,6 +49,8 @@ const FormularioModalServicio: React.FC<PropsFormularioModalServicio> = ({
       descripcion,
       duracion,
       precio: Number(precio),
+      tieneOferta,
+      precioOfertado: tieneOferta ? Number(precioOfertado) : undefined,
       categoria,
       foto,
       estado: servicioAEditar ? servicioAEditar.estado : 'Activo',
@@ -125,6 +131,8 @@ const FormularioModalServicio: React.FC<PropsFormularioModalServicio> = ({
               <input
                 type="number"
                 required
+                min="0"
+                step="0.01"
                 value={precio}
                 onChange={(e) => setPrecio(Number(e.target.value))}
                 className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
@@ -141,6 +149,34 @@ const FormularioModalServicio: React.FC<PropsFormularioModalServicio> = ({
               onChange={(e) => setFoto(e.target.value)}
               className="w-full bg-[#1e2538] border border-gray-700 text-gray-200 rounded-lg p-2.5 focus:outline-none"
             />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-gray-800 bg-[#131726] p-3">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={tieneOferta}
+                onChange={(e) => setTieneOferta(e.target.checked)}
+                className="rounded border-gray-700 bg-gray-800 text-indigo-600 focus:ring-0"
+              />
+              <span className="text-xs font-semibold text-white">¿Activar oferta para este servicio?</span>
+            </label>
+
+            {tieneOferta && (
+              <div>
+                <label className="mb-1 block text-xs text-gray-400">Precio con oferta ($ MXN)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  max={precio}
+                  required
+                  value={precioOfertado}
+                  onChange={(e) => setPrecioOfertado(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-700 bg-[#1e2538] p-2.5 text-gray-200 focus:outline-none"
+                />
+              </div>
+            )}
           </div>
 
           {errorGuardar && (

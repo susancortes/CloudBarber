@@ -5,6 +5,7 @@ import { Panel } from './pages/Panel';
 import { Citas } from './pages/Citas';
 import { Barberos } from './pages/Barberos';
 import { Servicios } from './pages/Servicios';
+import { Paquetes } from './pages/Paquetes';
 import type { Cita } from './types';
 
 export function App() {
@@ -82,6 +83,7 @@ export function App() {
           )}
           {paginaActual === 'barberos' && <Barberos />}
           {paginaActual === 'servicios' && <Servicios />}
+          {paginaActual === 'paquetes' && <Paquetes />}
         </main>
       </div>
     </div>

@@ -24,6 +24,8 @@ export interface Servicio {
   descripcion: string;
   duracion: string; 
   precio: number;
+  tieneOferta?: boolean;
+  precioOfertado?: number;
   foto?: string; // Foto opcional del servicio
   categoria?: 'Cabello' | 'Barba' | 'Facial';
   estado: 'Activo' | 'Inactivo';

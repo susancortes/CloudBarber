@@ -29,10 +29,42 @@ CREATE TABLE IF NOT EXISTS servicios (
     descripcion TEXT,
     duracion VARCHAR(20) DEFAULT '30 min',
     precio DECIMAL(10, 2) NOT NULL,
+    tiene_oferta BOOLEAN NOT NULL DEFAULT FALSE,
+    precio_ofertado DECIMAL(10, 2) NULL,
     categoria ENUM('Cabello', 'Barba', 'Facial') DEFAULT 'Cabello',
     foto TEXT,
     estado ENUM('Activo', 'Inactivo') DEFAULT 'Activo'
 );
+
+SET @agregar_tiene_oferta = (
+    SELECT IF(
+        COUNT(*) = 0,
+        'ALTER TABLE servicios ADD COLUMN tiene_oferta BOOLEAN NOT NULL DEFAULT FALSE',
+        'SELECT 1'
+    )
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'servicios'
+      AND COLUMN_NAME = 'tiene_oferta'
+);
+PREPARE servicio_oferta_stmt FROM @agregar_tiene_oferta;
+EXECUTE servicio_oferta_stmt;
+DEALLOCATE PREPARE servicio_oferta_stmt;
+
+SET @agregar_precio_ofertado = (
+    SELECT IF(
+        COUNT(*) = 0,
+        'ALTER TABLE servicios ADD COLUMN precio_ofertado DECIMAL(10, 2) NULL',
+        'SELECT 1'
+    )
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'servicios'
+      AND COLUMN_NAME = 'precio_ofertado'
+);
+PREPARE servicio_precio_oferta_stmt FROM @agregar_precio_ofertado;
+EXECUTE servicio_precio_oferta_stmt;
+DEALLOCATE PREPARE servicio_precio_oferta_stmt;
 
 -- 3. Tabla de Paquetes
 CREATE TABLE IF NOT EXISTS paquetes (

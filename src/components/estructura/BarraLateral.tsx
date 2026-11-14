@@ -12,6 +12,7 @@ export const BarraLateral: React.FC<PropsBarraLateral> = ({ paginaActual, setPag
     { id: 'citas', label: 'Citas', icon: '📅' },
     { id: 'barberos', label: 'Barberos', icon: '👤' },
     { id: 'servicios', label: 'Servicios', icon: '✂️' },
+    { id: 'paquetes', label: 'Paquetes', icon: '🎁' },
   ];
 
   const seleccionarPagina = (pagina: string) => {
