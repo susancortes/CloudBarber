@@ -14,6 +14,19 @@ interface ServicioApi {
   foto?: string;
 }
 
+interface PaqueteApi {
+  id: string | number;
+  nombrePaquete: string;
+  descripcion: string;
+  serviciosIncluidos: string[];
+  duracionTotal: string;
+  precioRegular: number | string;
+  precioOfertado: number | string | null;
+  tieneOferta: boolean;
+  categoria?: Paquete['categoria'];
+  estado: Paquete['estado'];
+}
+
 const obtenerServicios = async (): Promise<Servicio[]> => {
   const response = await fetch('http://localhost:4000/api/servicios');
   if (!response.ok) {
@@ -30,6 +43,23 @@ const obtenerServicios = async (): Promise<Servicio[]> => {
     categoria: servicio.categoria,
     estado: servicio.estado ?? 'Activo',
     foto: servicio.foto,
+  }));
+};
+
+const obtenerPaquetes = async (): Promise<Paquete[]> => {
+  const response = await fetch('http://localhost:4000/api/paquetes');
+  if (!response.ok) {
+    throw new Error(`Error al obtener paquetes: ${response.status}`);
+  }
+
+  const data: PaqueteApi[] = await response.json();
+  return data.map((paquete) => ({
+    ...paquete,
+    id: String(paquete.id),
+    precioRegular: Number(paquete.precioRegular),
+    precioOfertado: paquete.precioOfertado === null
+      ? undefined
+      : Number(paquete.precioOfertado),
   }));
 };
 
@@ -55,12 +85,21 @@ export const Servicios: React.FC = () => {
   useEffect(() => {
     let mounted = true;
 
-    obtenerServicios()
-      .then((data) => {
-        if (mounted) setServicios(data);
-      })
-      .catch((error: unknown) => {
-        console.error('Error al conectar con la API:', error);
+    Promise.allSettled([obtenerServicios(), obtenerPaquetes()])
+      .then(([serviciosResult, paquetesResult]) => {
+        if (!mounted) return;
+
+        if (serviciosResult.status === 'fulfilled') {
+          setServicios(serviciosResult.value);
+        } else {
+          console.error('Error al obtener servicios:', serviciosResult.reason);
+        }
+
+        if (paquetesResult.status === 'fulfilled') {
+          setPaquetes(paquetesResult.value);
+        } else {
+          console.error('Error al obtener paquetes:', paquetesResult.reason);
+        }
       })
       .finally(() => {
         if (mounted) setCargando(false);
@@ -135,12 +174,56 @@ export const Servicios: React.FC = () => {
     }
   };
 
-  const handleGuardarPaquete = (pq: Paquete) => {
-    if (paqueteAEditar) {
-      setPaquetes((prev) => prev.map((p) => (p.id === pq.id ? pq : p)));
-    } else {
-      setPaquetes((prev) => [pq, ...prev]);
+  const handleGuardarPaquete = async (pq: Paquete) => {
+    const serviciosIds = pq.serviciosIncluidos.map((nombreServicio) => {
+      const servicio = servicios.find(
+        (item) => item.nombreServicio.trim().toLocaleLowerCase() === nombreServicio.trim().toLocaleLowerCase()
+      );
+      if (!servicio) {
+        throw new Error(`No se encontró el servicio "${nombreServicio}" en el catálogo.`);
+      }
+
+      const id = Number(servicio.id);
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new Error(`El servicio "${nombreServicio}" tiene un identificador inválido.`);
+      }
+      return id;
+    });
+
+    const response = await fetch(
+      paqueteAEditar
+        ? `http://localhost:4000/api/paquetes/${pq.id}`
+        : 'http://localhost:4000/api/paquetes',
+      {
+      method: paqueteAEditar ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre_paquete: pq.nombrePaquete,
+        descripcion: pq.descripcion,
+        duracion_total: pq.duracionTotal,
+        precio_regular: pq.precioRegular,
+        precio_ofertado: pq.tieneOferta ? pq.precioOfertado : null,
+        tiene_oferta: pq.tieneOferta,
+        servicios_ids: serviciosIds,
+      }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`No se pudo guardar el paquete (${response.status}).`);
     }
+
+    const result: { id?: string | number } = await response.json();
+    const paqueteGuardado = {
+      ...pq,
+      id: paqueteAEditar ? pq.id : String(result.id),
+    };
+
+    setPaquetes((prev) =>
+      paqueteAEditar
+        ? prev.map((paquete) => (paquete.id === pq.id ? paqueteGuardado : paquete))
+        : [paqueteGuardado, ...prev]
+    );
   };
 
   const handleCambiarEstadoPaquete = (id: string) => {

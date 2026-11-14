@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const serviciosRoutes = require('./routes/serviciosRoutes');
+const paquetesRoutes = require('./routes/paquetesRoutes');
 
 const app = express();
 
@@ -10,6 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/api/servicios', serviciosRoutes);
+app.use('/api/paquetes', paquetesRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {
