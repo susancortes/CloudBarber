@@ -30,7 +30,85 @@ const crearServicio = async (req, res) => {
     }
 };
 
+const actualizarServicio = async (req, res) => {
+    const {
+        nombre_servicio,
+        descripcion,
+        duracion,
+        precio,
+        categoria,
+        estado,
+        foto
+    } = req.body || {};
+
+    if (
+        typeof nombre_servicio !== 'string' ||
+        !nombre_servicio.trim() ||
+        typeof duracion !== 'string' ||
+        !duracion.trim() ||
+        !Number.isFinite(Number(precio)) ||
+        !['Cabello', 'Barba', 'Facial'].includes(categoria) ||
+        !['Activo', 'Inactivo'].includes(estado)
+    ) {
+        return res.status(400).json({ error: 'Los datos del servicio no son válidos' });
+    }
+
+    try {
+        const [result] = await db.query(
+            `UPDATE servicios
+             SET nombre_servicio = ?, descripcion = ?, duracion = ?, precio = ?,
+                 categoria = ?, estado = ?, foto = ?
+             WHERE id = ?`,
+            [
+                nombre_servicio.trim(),
+                descripcion || '',
+                duracion.trim(),
+                Number(precio),
+                categoria,
+                estado,
+                foto || '',
+                req.params.id
+            ]
+        );
+
+        if (result.affectedRows === 0) {
+            const [rows] = await db.query('SELECT id FROM servicios WHERE id = ?', [req.params.id]);
+            if (rows.length === 0) {
+                return res.status(404).json({ error: 'Servicio no encontrado' });
+            }
+        }
+
+        res.json({ mensaje: 'Servicio actualizado correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+const actualizarEstadoServicio = async (req, res) => {
+    const { estado } = req.body;
+    if (estado !== 'Activo' && estado !== 'Inactivo') {
+        return res.status(400).json({ error: 'El estado debe ser Activo o Inactivo' });
+    }
+
+    try {
+        const [result] = await db.query(
+            'UPDATE servicios SET estado = ? WHERE id = ?',
+            [estado, req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Servicio no encontrado' });
+        }
+
+        res.json({ mensaje: 'Estado del servicio actualizado correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     obtenerServicios,
-    crearServicio
+    crearServicio,
+    actualizarServicio,
+    actualizarEstadoServicio
 };

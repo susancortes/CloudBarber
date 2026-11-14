@@ -1,7 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ModalServicio } from '../components/servicios/ModalServicio';
 import { ModalPaquete } from '../components/servicios/ModalPaquete';
 import type { Servicio, Paquete } from '../types';
+
+interface ServicioApi {
+  id: string | number;
+  nombre_servicio: string;
+  descripcion: string;
+  duracion: string;
+  precio: number | string;
+  categoria?: Servicio['categoria'];
+  estado?: Servicio['estado'];
+  foto?: string;
+}
+
+const obtenerServicios = async (): Promise<Servicio[]> => {
+  const response = await fetch('http://localhost:4000/api/servicios');
+  if (!response.ok) {
+    throw new Error(`Error al obtener servicios: ${response.status}`);
+  }
+
+  const data: ServicioApi[] = await response.json();
+  return data.map((servicio) => ({
+    id: String(servicio.id),
+    nombreServicio: servicio.nombre_servicio,
+    descripcion: servicio.descripcion,
+    duracion: servicio.duracion,
+    precio: Number(servicio.precio),
+    categoria: servicio.categoria,
+    estado: servicio.estado ?? 'Activo',
+    foto: servicio.foto,
+  }));
+};
 
 export const Servicios: React.FC = () => {
   const [pestanaActiva, setPestanaActiva] = useState<'servicios' | 'paquetes'>('servicios');
@@ -11,62 +41,10 @@ export const Servicios: React.FC = () => {
   const [filtroCategoriaPaquete, setFiltroCategoriaPaquete] = useState('todas');
   const [ordenPrecio, setOrdenPrecio] = useState<'ninguno' | 'menor-mayor' | 'mayor-menor'>('ninguno');
 
-  const [servicios, setServicios] = useState<Servicio[]>([
-    {
-      id: '1',
-      nombreServicio: 'Corte clásico',
-      descripcion: 'Corte tradicional con máquina y tijera.',
-      duracion: '30 min',
-      precio: 200,
-      categoria: 'Cabello',
-      estado: 'Activo',
-    },
-    {
-      id: '2',
-      nombreServicio: 'Arreglo de barba',
-      descripcion: 'Perfilado con navaja y toalla caliente.',
-      duracion: '25 min',
-      precio: 150,
-      categoria: 'Barba',
-      estado: 'Activo',
-    },
-    {
-      id: '3',
-      nombreServicio: 'Mascarilla Negra Facial',
-      descripcion: 'Limpieza profunda de poros.',
-      duracion: '20 min',
-      precio: 180,
-      categoria: 'Facial',
-      estado: 'Activo',
-    },
-  ]);
-
-  const [paquetes, setPaquetes] = useState<Paquete[]>([
-    {
-      id: 'p1',
-      nombrePaquete: 'Paquete Ejecutivo',
-      descripcion: 'Corte clásico + Arreglo de barba.',
-      serviciosIncluidos: ['Corte clásico', 'Arreglo de barba'],
-      duracionTotal: '1h 15min',
-      precioRegular: 450,
-      precioOfertado: 320,
-      tieneOferta: true,
-      categoria: 'Promoción',
-      estado: 'Activo',
-    },
-    {
-      id: 'p2',
-      nombrePaquete: 'Combo Full Relax',
-      descripcion: 'Corte + Barba + Mascarilla Facial.',
-      serviciosIncluidos: ['Corte clásico', 'Arreglo de barba', 'Mascarilla Facial'],
-      duracionTotal: '1h 40min',
-      precioRegular: 600,
-      precioOfertado: 500,
-      tieneOferta: false,
-      categoria: 'Estándar',
-      estado: 'Activo',
-    },
-  ]);
+  // Estados para datos reales de la base de datos
+  const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [paquetes, setPaquetes] = useState<Paquete[]>([]);
+  const [cargando, setCargando] = useState<boolean>(true);
 
   const [modalServicioAbierto, setModalServicioAbierto] = useState(false);
   const [servicioAEditar, setServicioAEditar] = useState<Servicio | null>(null);
@@ -74,20 +52,87 @@ export const Servicios: React.FC = () => {
   const [modalPaqueteAbierto, setModalPaqueteAbierto] = useState(false);
   const [paqueteAEditar, setPaqueteAEditar] = useState<Paquete | null>(null);
 
-  const handleGuardarServicio = (serv: Servicio) => {
-    if (servicioAEditar) {
-      setServicios((prev) => prev.map((s) => (s.id === serv.id ? serv : s)));
-    } else {
-      setServicios((prev) => [serv, ...prev]);
+  useEffect(() => {
+    let mounted = true;
+
+    obtenerServicios()
+      .then((data) => {
+        if (mounted) setServicios(data);
+      })
+      .catch((error: unknown) => {
+        console.error('Error al conectar con la API:', error);
+      })
+      .finally(() => {
+        if (mounted) setCargando(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // --- GUARDAR O CREAR SERVICIO EN LA BD ---
+  const handleGuardarServicio = async (serv: Servicio) => {
+    const response = await fetch(
+      servicioAEditar
+        ? `http://localhost:4000/api/servicios/${serv.id}`
+        : 'http://localhost:4000/api/servicios',
+      {
+        method: servicioAEditar ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre_servicio: serv.nombreServicio,
+          descripcion: serv.descripcion,
+          duracion: serv.duracion,
+          precio: serv.precio,
+          categoria: serv.categoria,
+          estado: serv.estado,
+          foto: serv.foto
+        })
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`No se pudo guardar el servicio (${response.status})`);
     }
+
+    const savedService = servicioAEditar
+      ? serv
+      : { ...serv, id: String((await response.json() as { id: string | number }).id) };
+
+    setServicios((prev) =>
+      servicioAEditar
+        ? prev.map((item) => (item.id === savedService.id ? savedService : item))
+        : [savedService, ...prev]
+    );
   };
 
-  const handleCambiarEstadoServicio = (id: string) => {
+  const handleCambiarEstadoServicio = async (id: string) => {
+    const servicioActual = servicios.find(s => s.id === id);
+    if (!servicioActual) return;
+
+    const nuevoEstado = servicioActual.estado === 'Activo' ? 'Inactivo' : 'Activo';
+
     setServicios((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, estado: s.estado === 'Activo' ? 'Inactivo' : 'Activo' } : s
-      )
+      prev.map((s) => (s.id === id ? { ...s, estado: nuevoEstado } : s))
     );
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/servicios/${id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: nuevoEstado }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al actualizar el estado: ${response.status}`);
+      }
+    } catch (error) {
+      setServicios((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, estado: servicioActual.estado } : s))
+      );
+      console.error('Error al cambiar el estado del servicio:', error);
+    }
   };
 
   const handleGuardarPaquete = (pq: Paquete) => {
@@ -115,11 +160,9 @@ export const Servicios: React.FC = () => {
   });
 
   const serviciosProcesados = [...serviciosFiltrados].sort((a, b) => {
-    // 1. Primero por estado (Cola: Activos arriba, Inactivos abajo)
     if (a.estado === 'Activo' && b.estado === 'Inactivo') return -1;
     if (a.estado === 'Inactivo' && b.estado === 'Activo') return 1;
 
-    // 2. Luego por precio (si el filtro de precio está activo)
     if (ordenPrecio === 'menor-mayor') return a.precio - b.precio;
     if (ordenPrecio === 'mayor-menor') return b.precio - a.precio;
 
@@ -134,20 +177,21 @@ export const Servicios: React.FC = () => {
   });
 
   const paquetesProcesados = [...paquetesFiltrados].sort((a, b) => {
-    // 1. Primero por estado (Cola: Activos arriba, Inactivos abajo)
     if (a.estado === 'Activo' && b.estado === 'Inactivo') return -1;
     if (a.estado === 'Inactivo' && b.estado === 'Activo') return 1;
 
-    // Obtener precio efectivo a pagar (oferta si está activa, de lo contrario precio regular)
     const precioEfectivoA = a.tieneOferta && a.precioOfertado ? a.precioOfertado : a.precioRegular;
     const precioEfectivoB = b.tieneOferta && b.precioOfertado ? b.precioOfertado : b.precioRegular;
 
-    // 2. Orden por precio inteligente (incluyendo ofertas)
     if (ordenPrecio === 'menor-mayor') return precioEfectivoA - precioEfectivoB;
     if (ordenPrecio === 'mayor-menor') return precioEfectivoB - precioEfectivoA;
 
     return 0;
   });
+
+  if (cargando) {
+    return <div className="text-center py-20 text-gray-400">Conectando con la base de datos de CloudBarber...</div>;
+  }
 
   return (
     <div>
@@ -290,24 +334,22 @@ export const Servicios: React.FC = () => {
                           {serv.estado}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-3">
+                      <td className="px-6 py-4 text-right space-x-2">
                         <button
                           onClick={() => {
                             setServicioAEditar(serv);
                             setModalServicioAbierto(true);
                           }}
-                          className="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-lg border border-gray-700 bg-[#1e2538] px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-gray-700"
+                          className="px-2.5 py-1 bg-[#1e2538] hover:bg-gray-700 rounded text-xs text-gray-300 border border-gray-700"
                         >
                           ✏️ Editar
                         </button>
                         <button
                           onClick={() => handleCambiarEstadoServicio(serv.id)}
-                          className="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-lg border border-gray-700 bg-[#1e2538] px-3 py-1.5 text-xs font-medium text-gray-200 hover:bg-gray-700"
+                          className="px-2.5 py-1 bg-[#1e2538] hover:bg-gray-700 rounded text-xs text-gray-300 border border-gray-700"
                         >
                           {activo ? 'Desactivar' : 'Activar'}
                         </button>
-                        </div>
                       </td>
                     </tr>
                   );
@@ -356,19 +398,19 @@ export const Servicios: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-3">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
                               setPaqueteAEditar(pq);
                               setModalPaqueteAbierto(true);
                             }}
-                            className="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-lg border border-gray-700 bg-[#1e2538] px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-700"
+                            className="px-3 py-1.5 bg-[#1e2538] hover:bg-gray-700 rounded-lg text-xs font-medium text-gray-200 border border-gray-700 transition-colors flex items-center gap-1"
                           >
                             ✏️ Editar
                           </button>
                           <button
                             onClick={() => handleCambiarEstadoPaquete(pq.id)}
-                            className="inline-flex w-24 items-center justify-center whitespace-nowrap rounded-lg border border-gray-700 bg-[#1e2538] px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:bg-gray-700"
+                            className="px-3 py-1.5 bg-[#1e2538] hover:bg-gray-700 rounded-lg text-xs font-medium text-gray-200 border border-gray-700 transition-colors"
                           >
                             {activo ? 'Desactivar' : 'Activar'}
                           </button>
