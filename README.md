@@ -34,23 +34,19 @@ Hay dos archivos `package-lock.json`: uno para el frontend y otro para el backen
 ## Configuración de la base de datos
 
 1. Inicia el servidor de MySQL.
-2. Revisa o crea el archivo `backend/.env` con la configuración de tu instalación:
+2. Crea tu archivo local `backend/.env` copiando la plantilla:
 
-   ```env
-   PORT=4000
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=tu_contraseña_de_mysql
-   DB_NAME=cloudbarber_db
-   DB_PORT=3307
+   ```powershell
+   Copy-Item backend\.env.example backend\.env
    ```
 
-   Cambia `DB_USER`, `DB_PASSWORD` y `DB_PORT` según tu instalación. Por ejemplo, MySQL suele usar el puerto `3306`; el proyecto usa `3307` como valor predeterminado. Mantén `PORT=4000`, ya que el frontend se conecta a la API en ese puerto.
+   En macOS o Linux, puedes usar `cp backend/.env.example backend/.env`.
+3. Edita `backend/.env` y cambia `DB_USER`, `DB_PASSWORD` y `DB_PORT` según tu instalación. MySQL suele usar el puerto `3306`; el proyecto propone `3307`. Mantén `PORT=4000`, ya que el frontend se conecta a la API en ese puerto.
 
-3. En MySQL Workbench, abre `backend/database/schema.sql` y ejecuta el script completo. Este crea `cloudbarber_db`, las tablas y los estados iniciales de las citas. **Ejecútalo una sola vez al preparar una base nueva.** No borra los datos existentes, pero volver a ejecutarlo puede duplicar los estados iniciales.
-4. El esquema solo crea la estructura y los estados iniciales; no contiene los registros de servicios, paquetes ni barberos de otros integrantes. Cada persona debe agregar sus propios datos o importar un respaldo autorizado si necesita compartirlos.
+4. En MySQL Workbench, abre `backend/database/schema.sql` y ejecuta el script completo. Este crea `cloudbarber_db`, las tablas y los estados iniciales de las citas. **Ejecútalo una sola vez al preparar una base nueva.** No borra los datos existentes, pero volver a ejecutarlo puede duplicar los estados iniciales.
+5. El esquema solo crea la estructura y los estados iniciales; no contiene los registros de servicios, paquetes ni barberos de otros integrantes. Cada persona debe agregar sus propios datos o importar un respaldo autorizado si necesita compartirlos.
 
-Usa las credenciales de tu instalación local y no escribas contraseñas reales en este README ni en otros archivos de documentación.
+`backend/.env` contiene credenciales locales y está excluido de Git. No lo compartas ni reemplaces la plantilla `.env.example` con contraseñas reales. Si alguna contraseña ya se subió al repositorio, cámbiala: ignorar o retirar el archivo no elimina su contenido del historial anterior de Git.
 
 ## Iniciar la aplicación
 
