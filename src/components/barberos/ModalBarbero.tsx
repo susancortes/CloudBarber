@@ -3,7 +3,7 @@ import type { Barbero } from '../../types';
 
 interface PropsModalBarbero {
   onClose: () => void;
-  onGuardar: (barbero: Barbero) => void;
+  onGuardar: (barbero: Barbero) => Promise<void> | void;
   barberoAEditar?: Barbero | null;
 }
 
@@ -15,8 +15,10 @@ export const ModalBarbero: React.FC<PropsModalBarbero> = ({
   const [nombre, setNombre] = useState(barberoAEditar?.nombre ?? '');
   const [rol, setRol] = useState(barberoAEditar?.rol ?? 'Barbero');
   const [fotoPerfil, setFotoPerfil] = useState(barberoAEditar?.fotoPerfil ?? '');
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim()) return;
 
@@ -29,8 +31,16 @@ export const ModalBarbero: React.FC<PropsModalBarbero> = ({
       historialCortes: barberoAEditar ? barberoAEditar.historialCortes : [],
     };
 
-    onGuardar(barberoData);
-    onClose();
+    setGuardando(true);
+    setErrorGuardar(null);
+    try {
+      await onGuardar(barberoData);
+      onClose();
+    } catch (error) {
+      setErrorGuardar(error instanceof Error ? error.message : 'No se pudo guardar el barbero.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -79,6 +89,12 @@ export const ModalBarbero: React.FC<PropsModalBarbero> = ({
             />
           </div>
 
+          {errorGuardar && (
+            <p role="alert" className="text-sm text-red-400">
+              {errorGuardar}
+            </p>
+          )}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-800">
             <button
               type="button"
@@ -89,9 +105,10 @@ export const ModalBarbero: React.FC<PropsModalBarbero> = ({
             </button>
             <button
               type="submit"
+              disabled={guardando}
               className="px-4 py-2 rounded-lg bg-white text-gray-900 hover:bg-gray-200 font-semibold"
             >
-              Guardar
+              {guardando ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
         </form>

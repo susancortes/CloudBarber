@@ -11,6 +11,17 @@ CREATE TABLE IF NOT EXISTS barberos (
     estado ENUM('Activo', 'Inactivo') DEFAULT 'Activo'
 );
 
+CREATE TABLE IF NOT EXISTS barbero_cortes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    barbero_id INT NOT NULL,
+    titulo_corte VARCHAR(100) NOT NULL, 
+    descripcion TEXT,                   
+    foto_antes TEXT NULL,               
+    foto_despues TEXT NOT NULL,         
+    fecha_publicacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (barbero_id) REFERENCES barberos(id) ON DELETE CASCADE
+);
+
 -- 2. Tabla de Servicios
 CREATE TABLE IF NOT EXISTS servicios (
     id INT AUTO_INCREMENT PRIMARY KEY,

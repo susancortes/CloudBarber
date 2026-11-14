@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const serviciosRoutes = require('./routes/serviciosRoutes');
 const paquetesRoutes = require('./routes/paquetesRoutes');
+const barberosRoutes = require('./routes/barberosRoutes');
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/servicios', serviciosRoutes);
 app.use('/api/paquetes', paquetesRoutes);
+app.use('/api/barberos', barberosRoutes);
 
 // Rutas de prueba
 app.get('/', (req, res) => {

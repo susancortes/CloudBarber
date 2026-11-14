@@ -1,30 +1,38 @@
 import React, { useState } from 'react';
 import { TarjetaBarbero } from '../components/barberos/TarjetaBarbero';
 import { ModalBarbero } from '../components/barberos/ModalBarbero';
-import type { Barbero } from '../types';
+import type { Barbero, PublicacionCorte } from '../types';
+
+const obtenerBarberos = async (): Promise<Barbero[]> => {
+  const response = await fetch('http://localhost:4000/api/barberos');
+  if (!response.ok) {
+    throw new Error(`Error al obtener barberos: ${response.status}`);
+  }
+
+  return response.json();
+};
 
 export const Barberos: React.FC = () => {
-  const [barberos, setBarberos] = useState<Barbero[]>([
-    {
-      id: '1',
-      nombre: 'Carlos Ruiz',
-      rol: 'Barbero sénior',
-      fotoPerfil: '',
-      estado: 'Activo',
-      historialCortes: [],
-    },
-    {
-      id: '2',
-      nombre: 'Diego Martín',
-      rol: 'Barbero',
-      fotoPerfil: '',
-      estado: 'Activo',
-      historialCortes: [],
-    },
-  ]);
+  const [barberos, setBarberos] = useState<Barbero[]>([]);
 
   const [modalAbierto, setModalAbierto] = useState(false);
   const [barberoAEditar, setBarberoAEditar] = useState<Barbero | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    obtenerBarberos()
+      .then((data) => {
+        if (mounted) setBarberos(data);
+      })
+      .catch((error: unknown) => {
+        console.error('Error al cargar barberos:', error);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleAbrirCrear = () => {
     setBarberoAEditar(null);
@@ -36,14 +44,31 @@ export const Barberos: React.FC = () => {
     setModalAbierto(true);
   };
 
-  const handleGuardarBarbero = (barb: Barbero) => {
-    if (barberoAEditar) {
-      // Editar existente
-      setBarberos((prev) => prev.map((b) => (b.id === barb.id ? barb : b)));
-    } else {
-      // Crear nuevo
-      setBarberos((prev) => [barb, ...prev]);
+  const handleGuardarBarbero = async (barb: Barbero) => {
+    const response = await fetch(
+      barberoAEditar
+        ? `http://localhost:4000/api/barberos/${barb.id}`
+        : 'http://localhost:4000/api/barberos',
+      {
+        method: barberoAEditar ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(barb),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`No se pudo guardar el barbero (${response.status}).`);
     }
+
+    const barberoGuardado = barberoAEditar
+      ? barb
+      : { ...barb, id: String((await response.json() as { id: string | number }).id) };
+
+    setBarberos((prev) =>
+      barberoAEditar
+        ? prev.map((barbero) => (barbero.id === barb.id ? barberoGuardado : barbero))
+        : [barberoGuardado, ...prev]
+    );
   };
 
   const handleCambiarEstado = (id: string) => {
@@ -54,10 +79,31 @@ export const Barberos: React.FC = () => {
     );
   };
 
-  const handleAgregarCorte = (idBarbero: string, urlFoto: string) => {
+  const handleAgregarCorte = async (idBarbero: string, publicacion: Omit<PublicacionCorte, 'id'>) => {
+    const response = await fetch(`http://localhost:4000/api/barberos/${idBarbero}/cortes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tituloCorte: publicacion.tituloCorte,
+        descripcion: publicacion.descripcion,
+        fotoAntes: publicacion.fotoAntes,
+        fotoDespues: publicacion.fotoDespues,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`No se pudo guardar la publicación (${response.status}).`);
+    }
+
+    const result: { id: string | number } = await response.json();
     setBarberos((prev) =>
-      prev.map((b) =>
-        b.id === idBarbero ? { ...b, historialCortes: [...b.historialCortes, urlFoto] } : b
+      prev.map((barbero) =>
+        barbero.id === idBarbero
+          ? {
+              ...barbero,
+              historialCortes: [{ ...publicacion, id: String(result.id) }, ...barbero.historialCortes],
+            }
+          : barbero
       )
     );
   };
@@ -91,7 +137,7 @@ export const Barberos: React.FC = () => {
         <span>{activosCount} activos · {inactivosCount} inactivos</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {barberosOrdenados.map((barbero) => (
           <TarjetaBarbero
             key={barbero.id}

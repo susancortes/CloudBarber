@@ -1,117 +1,221 @@
 import React, { useState } from 'react';
-import type { Barbero } from '../../types';
+import type { Barbero, PublicacionCorte } from '../../types';
 
-interface PropsTarjetaBarbero {
+interface TarjetaBarberoProps {
   barbero: Barbero;
   onEditar: (barbero: Barbero) => void;
   onCambiarEstado: (id: string) => void;
-  onAgregarCorte: (idBarbero: string, urlFoto: string) => void;
+  onAgregarCorte: (idBarbero: string, publicacion: Omit<PublicacionCorte, 'id'>) => Promise<void> | void;
 }
 
-export const TarjetaBarbero: React.FC<PropsTarjetaBarbero> = ({
+export const TarjetaBarbero: React.FC<TarjetaBarberoProps> = ({
   barbero,
   onEditar,
   onCambiarEstado,
   onAgregarCorte,
 }) => {
-  const activo = barbero.estado === 'Activo';
-  const [nuevaFotoUrl, setNuevaFotoUrl] = useState('');
-  const [mostrarSubida, setMostrarSubida] = useState(false);
+  const [modalCorteAbierto, setModalCorteAbierto] = useState(false);
+  const [tituloCorte, setTituloCorte] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [fotoAntes, setFotoAntes] = useState('');
+  const [fotoDespues, setFotoDespues] = useState('');
+  const [errorPublicacion, setErrorPublicacion] = useState<string | null>(null);
+  const [guardandoPublicacion, setGuardandoPublicacion] = useState(false);
 
-  const handleSubirCorte = (e: React.FormEvent) => {
+  const activo = barbero.estado === 'Activo';
+
+  const handleSubmitCorte = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nuevaFotoUrl.trim()) return;
-    onAgregarCorte(barbero.id, nuevaFotoUrl);
-    setNuevaFotoUrl('');
-    setMostrarSubida(false);
+    if (!fotoDespues || !tituloCorte) return;
+
+    setGuardandoPublicacion(true);
+    setErrorPublicacion(null);
+    try {
+      await onAgregarCorte(barbero.id, {
+        tituloCorte,
+        descripcion,
+        fotoAntes,
+        fotoDespues,
+      });
+
+      setTituloCorte('');
+      setDescripcion('');
+      setFotoAntes('');
+      setFotoDespues('');
+      setModalCorteAbierto(false);
+    } catch (error) {
+      setErrorPublicacion(
+        error instanceof Error ? error.message : 'No se pudo guardar la publicación.'
+      );
+    } finally {
+      setGuardandoPublicacion(false);
+    }
   };
 
   return (
-    <div
-      className={`bg-[#161B2C] border rounded-xl p-5 flex flex-col justify-between shadow-md transition-all ${
-        activo ? 'border-gray-800' : 'border-gray-800/50 opacity-75'
-      }`}
-    >
-      <div>
-        {/* Cabecera de la tarjeta */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="w-14 h-14 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-xl text-gray-400 overflow-hidden">
+    <div className={`flex flex-col gap-6 rounded-2xl border bg-zinc-900 p-5 shadow-xl transition-all xl:flex-row xl:p-6 ${activo ? 'border-zinc-800' : 'border-zinc-800 opacity-60'}`}>
+      <div className="flex flex-col gap-4 xl:w-64 xl:shrink-0 xl:border-r xl:border-zinc-800 xl:pr-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-800 text-3xl">
             {barbero.fotoPerfil ? (
-              <img src={barbero.fotoPerfil} alt={barbero.nombre} className="w-full h-full object-cover" />
+              <img src={barbero.fotoPerfil} alt={barbero.nombre} className="h-full w-full object-cover" />
             ) : (
-              '👤'
+              '✂️'
             )}
           </div>
+          <div>
+            <h3 className="text-lg font-bold text-white">{barbero.nombre}</h3>
+            <p className="text-xs font-medium text-pink-400">{barbero.rol}</p>
+            <span className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-[10px] ${activo ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-zinc-500/20 bg-zinc-500/10 text-zinc-400'}`}>
+              {barbero.estado}
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setModalCorteAbierto(true)}
+          className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-xl border border-pink-500/30 bg-pink-600/20 py-2 text-xs font-semibold text-pink-400 transition-colors hover:bg-pink-600/30"
+        >
+          <span>📸 + Subir Antes / Después</span>
+        </button>
+
+        <div className="mt-auto flex w-full flex-col gap-2 border-t border-zinc-800 pt-4">
           <button
             onClick={() => onEditar(barbero)}
-            className="text-xs text-gray-400 hover:text-white flex items-center gap-1 bg-[#1e2538] px-3 py-1.5 rounded-lg border border-gray-700 transition-colors"
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-2 text-xs text-zinc-300 transition-colors hover:bg-zinc-700"
           >
             ✏️ Editar
           </button>
+          <button
+            onClick={() => onCambiarEstado(barbero.id)}
+            className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-2 text-xs text-zinc-300 transition-colors hover:bg-zinc-700"
+          >
+            {activo ? 'Desactivar' : 'Activar'}
+          </button>
         </div>
+      </div>
 
-        {/* Información del Barbero */}
-        <h3 className="text-lg font-bold text-white mb-0.5">{barbero.nombre}</h3>
-        <p className="text-xs text-gray-400 mb-4">{barbero.rol}</p>
+      <div className="min-w-0 flex-1 xl:pl-1">
+        <h4 className="mb-4 border-t border-zinc-800 pt-4 text-xs font-semibold uppercase tracking-wider text-zinc-400 xl:border-t-0 xl:pt-0">
+          Portafolio de Trabajos ({barbero.historialCortes.length})
+        </h4>
 
-        {/* Apartado: Historial de fotos de cortes */}
-        <div className="mb-5 bg-[#131726] p-3 rounded-lg border border-gray-800/80">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-medium text-gray-300">Historial de Cortes ({barbero.historialCortes.length})</span>
-            <button
-              onClick={() => setMostrarSubida(!mostrarSubida)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
-            >
-              {mostrarSubida ? 'Cancelar' : '+ Subir corte'}
-            </button>
-          </div>
-
-          {/* Formulario rápido para simular subida de foto */}
-          {mostrarSubida && (
-            <form onSubmit={handleSubirCorte} className="mb-3 flex gap-2">
-              <input
-                type="text"
-                placeholder="URL de la foto del corte..."
-                value={nuevaFotoUrl}
-                onChange={(e) => setNuevaFotoUrl(e.target.value)}
-                className="flex-1 bg-[#1e2538] text-xs text-gray-200 px-2.5 py-1.5 rounded border border-gray-700 focus:outline-none"
-              />
-              <button type="submit" className="bg-white text-gray-900 text-xs px-2.5 py-1.5 rounded font-semibold">
-                Guardar
-              </button>
-            </form>
-          )}
-
-          {/* Galería de miniaturas */}
-          {barbero.historialCortes.length === 0 ? (
-            <p className="text-xs text-gray-500 italic">No hay fotos de cortes registradas aún.</p>
-          ) : (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {barbero.historialCortes.map((foto, index) => (
-                <div key={index} className="w-12 h-12 rounded bg-gray-800 flex-shrink-0 overflow-hidden border border-gray-700">
-                  <img src={foto} alt={`Corte ${index + 1}`} className="w-full h-full object-cover" />
+        {barbero.historialCortes.length === 0 ? (
+          <p className="text-xs text-zinc-500 italic py-2">Este barbero aún no ha subido publicaciones de sus cortes.</p>
+        ) : (
+          <div className="grid max-h-[34rem] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 2xl:grid-cols-3">
+            {barbero.historialCortes.map((pub) => (
+              <div key={pub.id} className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h5 className="text-sm font-bold text-white">{pub.tituloCorte}</h5>
+                  <span className="text-[10px] text-zinc-500">
+                    {pub.fecha ? new Date(pub.fecha).toLocaleDateString() : 'Reciente'}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                {pub.descripcion && (
+                  <p className="text-xs text-zinc-400 mb-3 leading-relaxed">{pub.descripcion}</p>
+                )}
+
+                {/* Contenedor de Fotos: Antes y Después */}
+                <div className="grid grid-cols-2 gap-2">
+                  {pub.fotoAntes && (
+                    <div className="relative group">
+                      <span className="absolute top-1 left-1 bg-black/70 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded font-medium z-10">Antes</span>
+                      <img src={pub.fotoAntes} alt="Antes del corte" className="h-44 w-full rounded-lg border border-zinc-800 object-cover" />
+                    </div>
+                  )}
+                  <div className={`relative group ${!pub.fotoAntes ? 'col-span-2' : ''}`}>
+                    <span className="absolute top-1 left-1 bg-pink-600/80 text-white text-[9px] px-1.5 py-0.5 rounded font-medium z-10">Después</span>
+                    <img src={pub.fotoDespues} alt="Después del corte" className="h-44 w-full rounded-lg border border-zinc-800 object-cover" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Pie de la tarjeta: Estatus Activo / Inactivo */}
-      <div className="flex items-center justify-between pt-4 border-t border-gray-800/80">
-        <span className={`text-xs font-medium ${activo ? 'text-emerald-400' : 'text-gray-500'}`}>
-          {barbero.estado}
-        </span>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            checked={activo}
-            onChange={() => onCambiarEstado(barbero.id)}
-            className="sr-only peer"
-          />
-          <div className="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-        </label>
-      </div>
+      {/* Modal interno para subir publicación */}
+      {modalCorteAbierto && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white">Nueva Publicación (Antes / Después)</h3>
+              <button onClick={() => setModalCorteAbierto(false)} className="text-zinc-400 hover:text-white">✕</button>
+            </div>
+
+            <form onSubmit={handleSubmitCorte} className="space-y-3">
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">Nombre / Título del Corte *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Fade Bajo con Textura"
+                  value={tituloCorte}
+                  onChange={(e) => setTituloCorte(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-pink-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">Descripción del trabajo</label>
+                <textarea
+                  placeholder="Detalles sobre las técnicas utilizadas..."
+                  value={descripcion}
+                  onChange={(e) => setDescripcion(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-pink-600 h-16 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">URL o Imagen del ANTES (Opcional)</label>
+                <input
+                  type="text"
+                  placeholder="https://... o ruta de imagen"
+                  value={fotoAntes}
+                  onChange={(e) => setFotoAntes(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-pink-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1">URL o Imagen del DESPUÉS *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="https://... o ruta de imagen"
+                  value={fotoDespues}
+                  onChange={(e) => setFotoDespues(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-pink-600"
+                />
+              </div>
+
+              {errorPublicacion && (
+                <p role="alert" className="text-xs text-red-400">
+                  {errorPublicacion}
+                </p>
+              )}
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setModalCorteAbierto(false)}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-medium"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={guardandoPublicacion}
+                  className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-medium shadow-lg shadow-pink-900/30"
+                >
+                  {guardandoPublicacion ? 'Guardando…' : 'Publicar en Portafolio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,11 +1,20 @@
 // --- BARBEROS ---
+export interface PublicacionCorte {
+  id: string;
+  tituloCorte: string;
+  descripcion: string;
+  fotoAntes?: string;
+  fotoDespues: string;
+  fecha?: string;
+}
+
 export interface Barbero {
   id: string;
   nombre: string;
-  rol: string; // ej. 'Barbero sénior', 'Barbero'
+  rol: string;
   fotoPerfil: string;
   estado: 'Activo' | 'Inactivo';
-  historialCortes: string[]; // Lista de URLs/rutas de fotos de cortes realizados
+  historialCortes: PublicacionCorte[];
 }
 
 // --- SERVICIOS ---
@@ -13,7 +22,7 @@ export interface Servicio {
   id: string;
   nombreServicio: string;
   descripcion: string;
-  duracion: string; // ej. '30 min'
+  duracion: string; 
   precio: number;
   foto?: string; // Foto opcional del servicio
   categoria?: 'Cabello' | 'Barba' | 'Facial';
